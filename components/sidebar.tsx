@@ -1,7 +1,5 @@
 "use client"
 
-import type React from "react"
-
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
@@ -15,9 +13,25 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { motion } from "framer-motion"
-import { useAuth } from "@/lib/AuthContext"
 import { useToast } from "@/components/ui/use-toast"
 import { supabase } from "@/lib/supabaseClient"
+import { useAuth } from "@/lib/AuthContext"
+
+// Animation variants
+const container = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1
+    }
+  }
+}
+
+const item = {
+  hidden: { opacity: 0, x: -20 },
+  show: { opacity: 1, x: 0 }
+}
 
 type NavItem = {
   name: string
@@ -51,52 +65,38 @@ export function Sidebar() {
     {
       name: "Dashboard",
       href: "/dashboard",
-      icon: <LayoutDashboard className="w-5 h-5" />,
+      icon: <LayoutDashboard className="h-5 w-5" />,
     },
     {
       name: "Server",
       href: "/server",
-      icon: <Utensils className="w-5 h-5" />,
+      icon: <Utensils className="h-5 w-5" />,
+      badge: 2,
     },
     {
       name: "Kitchen",
       href: "/kitchen",
-      icon: <ChefHat className="w-5 h-5" />,
-      badge: 5, // Example badge count
+      icon: <ChefHat className="h-5 w-5" />,
+      badge: 5,
     },
     {
       name: "Expo",
       href: "/expo",
-      icon: <Shield className="w-5 h-5" />,
-      badge: 2, // Example badge count
+      icon: <Shield className="h-5 w-5" />,
+      badge: 2,
     },
     {
       name: "Admin",
       href: "/admin",
-      icon: <Settings className="w-5 h-5" />,
+      icon: <Settings className="h-5 w-5" />,
     },
   ]
-
-  const container = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.05,
-        delayChildren: 0.1,
-      },
-    },
-  }
-
-  const item = {
-    hidden: { opacity: 0, x: -10 },
-    show: { opacity: 1, x: 0, transition: { duration: 0.3 } },
-  }
 
   const handleSignOut = async () => {
     try {
       await signOut()
       router.push('/')
+      router.refresh()
       toast({
         title: "Signed out",
         description: "You have been signed out successfully.",
@@ -112,7 +112,7 @@ export function Sidebar() {
 
   const renderNavItems = () => (
     <motion.ul variants={container} initial="hidden" animate="show" className="space-y-1 px-2">
-      {navItems.map((navItem) => ( // Renamed inner variable to avoid conflict
+      {navItems.map((navItem) => (
         <motion.li key={navItem.href} variants={item}>
           <TooltipProvider delayDuration={100}>
             <Tooltip>
@@ -125,26 +125,25 @@ export function Sidebar() {
                       ? "bg-white/10 text-white"
                       : "text-gray-400 hover:bg-white/5 hover:text-white",
                   )}
-                  onClick={() => isMobile && setIsMobileOpen(false)} // Close mobile menu on click
+                  onClick={() => isMobile && setIsMobileOpen(false)}
                 >
                   <span className="mr-3">{navItem.icon}</span>
-                  {/* Always show name in mobile sheet, hide based on collapsed state otherwise */}
                   {(isMobileOpen || !collapsed) && <span>{navItem.name}</span>}
                   {navItem.badge && (
                     <Badge
                       variant="default"
-                      className={cn(
-                        "ml-auto bg-teal-600 text-white text-xs px-1.5 py-0.5", // Adjusted padding/size
-                        (collapsed && !isMobileOpen) && "absolute -right-1 -top-1 h-4 w-4 justify-center p-0" // Adjusted positioning for collapsed
-                      )}
+                      className="ml-auto bg-blue-600 hover:bg-blue-600"
                     >
                       {navItem.badge}
                     </Badge>
                   )}
                 </Link>
               </TooltipTrigger>
-              {/* Show tooltip only when collapsed and not in mobile sheet */}
-              {(collapsed && !isMobileOpen) && <TooltipContent side="right">{navItem.name}</TooltipContent>}
+              {collapsed && !isMobile && (
+                <TooltipContent side="right">
+                  <p>{navItem.name}</p>
+                </TooltipContent>
+              )}
             </Tooltip>
           </TooltipProvider>
         </motion.li>
@@ -215,28 +214,31 @@ export function Sidebar() {
   if (isMobile) {
     return (
       <>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="fixed top-4 left-4 z-50"
+          onClick={() => setIsMobileOpen(true)}
+        >
+          <Menu className="h-5 w-5" />
+        </Button>
+
         <Sheet open={isMobileOpen} onOpenChange={setIsMobileOpen}>
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="md:hidden fixed top-4 left-4 z-50 bg-black/20 backdrop-blur-sm" aria-label="Open Menu">
-              <Menu className="h-5 w-5" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="p-0 w-64 bg-[#1a1a24] border-gray-800 flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b border-gray-800">
-              <div className="flex items-center">
-                <div className="relative h-8 w-8 mr-2">
-                  <Image src="/images/plate-logo-white.png" alt="Plate Logo" fill className="object-contain" />
-                </div>
-                <span className="text-xl font-semibold sf-pro-display">Plate</span>
+          <SheetContent side="left" className="w-64 bg-[#1a1a24] border-r border-gray-800 p-0">
+            <div className="flex flex-col h-full">
+              <div className="p-4">
+                <Image
+                  src="/images/plate-logo-white.png"
+                  alt="Logo"
+                  width={32}
+                  height={32}
+                />
               </div>
-              <Button variant="ghost" size="icon" onClick={() => setIsMobileOpen(false)} aria-label="Close Menu">
-                <X className="h-5 w-5" />
-              </Button>
+
+              {renderNavItems()}
+
+              {userInfoSection}
             </div>
-
-            <nav className="flex-grow py-4 overflow-y-auto">{renderNavItems()}</nav>
-
-            {userInfoSection}
           </SheetContent>
         </Sheet>
       </>
@@ -247,29 +249,28 @@ export function Sidebar() {
   return (
     <div
       className={cn(
-        "hidden md:flex flex-col h-screen bg-[#1a1a24] border-r border-gray-800 transition-all duration-300 ease-in-out",
-        collapsed ? "w-16" : "w-64",
+        "bg-[#1a1a24] border-r border-gray-800 flex flex-col transition-all duration-300",
+        collapsed ? "w-16" : "w-64"
       )}
     >
-      <div className="flex items-center justify-between p-4 border-b border-gray-800">
-        <div className="flex items-center">
-          <div className="relative h-8 w-8 mr-2">
-            <Image src="/images/plate-logo-white.png" alt="Plate Logo" fill className="object-contain" />
-          </div>
-          {!collapsed && <span className="text-xl font-semibold sf-pro-display">Plate</span>}
-        </div>
+      <div className="p-4 flex items-center justify-between">
+        <Image
+          src="/images/plate-logo-white.png"
+          alt="Logo"
+          width={32}
+          height={32}
+        />
         <Button
           variant="ghost"
           size="icon"
           onClick={() => setCollapsed(!collapsed)}
-          className="hover:bg-white/5"
-          aria-label={collapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+          className="text-gray-400 hover:text-white"
         >
           <ChevronLeft className={cn("h-5 w-5 transition-transform", collapsed && "rotate-180")} />
         </Button>
       </div>
 
-      <nav className="flex-grow py-4 overflow-y-auto">{renderNavItems()}</nav>
+      {renderNavItems()}
 
       {desktopUserInfoSection}
     </div>

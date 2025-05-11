@@ -1,12 +1,13 @@
 "use client"
 
 import { useState } from "react"
-import { useAuth } from "@/lib/AuthContext"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { useAuth } from "@/lib/AuthContext"
 import {
   Select,
   SelectContent,
@@ -23,8 +24,9 @@ export function AuthForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [isSignUp, setIsSignUp] = useState(false)
   const [status, setStatus] = useState<{ message: string; type: 'success' | 'error' | null }>({ message: '', type: null })
-  const { signIn, signUp } = useAuth()
   const { toast } = useToast()
+  const router = useRouter()
+  const { signIn, signUp } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -41,7 +43,7 @@ export function AuthForm() {
         }
         await signUp(email, password, name, role)
         setStatus({
-          message: "Account created! Please check your email for the confirmation link.",
+          message: "Check your email for the confirmation link.",
           type: 'success'
         })
         toast({
@@ -50,10 +52,8 @@ export function AuthForm() {
         })
       } else {
         await signIn(email, password)
-        setStatus({
-          message: "Signing you in...",
-          type: 'success'
-        })
+        router.push('/dashboard')
+        router.refresh()
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 
