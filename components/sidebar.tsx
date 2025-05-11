@@ -17,6 +17,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { motion } from "framer-motion"
 import { useAuth } from "@/lib/AuthContext"
 import { useToast } from "@/components/ui/use-toast"
+import { supabase } from "@/lib/supabaseClient"
 
 type NavItem = {
   name: string
@@ -25,27 +26,54 @@ type NavItem = {
   badge?: number
 }
 
+type UserRole = {
+  role: string
+}
+
 export function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const [collapsed, setCollapsed] = useState(false)
-  const [notifications, setNotifications] = useState(3) // Example notification count
+  const [notifications, setNotifications] = useState(3)
   const isMobile = useMediaQuery("(max-width: 768px)")
   const [isMobileOpen, setIsMobileOpen] = useState(false)
-  const { signOut } = useAuth()
+  const { user, signOut } = useAuth()
   const { toast } = useToast()
+  const [userRole, setUserRole] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchUserRole = async () => {
+      if (user) {
+        try {
+          const { data, error } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', user.id)
+            .single()
+
+          if (error) {
+            console.error('Error fetching user role:', error)
+            return
+          }
+
+          if (data) {
+            setUserRole(data.role)
+          }
+        } catch (error) {
+          console.error('Error fetching user role:', error)
+        }
+      }
+    }
+
+    fetchUserRole()
+  }, [user])
 
   // Reset mobile menu state when screen size changes
   useEffect(() => {
     if (!isMobile && isMobileOpen) {
       setIsMobileOpen(false)
     }
-
-    // Auto-collapse sidebar on mobile if needed (optional)
-    // if (isMobile && !collapsed) {
-    //   setCollapsed(true)
-    // }
-  }, [isMobile, isMobileOpen]) // Removed collapsed from deps if not auto-collapsing
+  }, [isMobile, isMobileOpen])
 
   const navItems: NavItem[] = [
     {
@@ -152,6 +180,65 @@ export function Sidebar() {
     </motion.ul>
   )
 
+  // In the mobile view
+  const userInfoSection = (
+    <div className="p-4 border-t border-gray-800 mt-auto">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center">
+          <Avatar className="h-8 w-8 mr-2">
+            <AvatarFallback>{user?.user_metadata?.full_name?.[0] || 'U'}</AvatarFallback>
+          </Avatar>
+          <div>
+            <p className="text-sm font-medium sf-pro-text">{user?.user_metadata?.full_name || 'User'}</p>
+            <p className="text-xs text-gray-400 sf-pro-text capitalize">{userRole || 'Loading...'}</p>
+          </div>
+        </div>
+        <Button 
+          variant="ghost" 
+          size="icon"
+          onClick={handleSignOut}
+          className="text-gray-400 hover:text-white hover:bg-white/10"
+        >
+          <LogOut className="h-5 w-5" />
+        </Button>
+      </div>
+    </div>
+  )
+
+  // In the desktop view
+  const desktopUserInfoSection = (
+    <div className="p-4 border-t border-gray-800">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center min-w-0">
+          <Avatar className="h-8 w-8 mr-2 flex-shrink-0">
+            <AvatarFallback>{user?.user_metadata?.full_name?.[0] || 'U'}</AvatarFallback>
+          </Avatar>
+          {!collapsed && (
+            <div className="min-w-0">
+              <p className="text-sm font-medium sf-pro-text truncate">{user?.user_metadata?.full_name || 'User'}</p>
+              <p className="text-xs text-gray-400 sf-pro-text capitalize">{userRole || 'Loading...'}</p>
+            </div>
+          )}
+        </div>
+        <TooltipProvider delayDuration={100}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleSignOut}
+                className="text-gray-400 hover:text-white hover:bg-white/10"
+              >
+                <LogOut className="h-5 w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">Sign Out</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+    </div>
+  )
+
   // Mobile sidebar
   if (isMobile) {
     return (
@@ -177,27 +264,7 @@ export function Sidebar() {
 
             <nav className="flex-grow py-4 overflow-y-auto">{renderNavItems()}</nav>
 
-            <div className="p-4 border-t border-gray-800 mt-auto">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <Avatar className="h-8 w-8 mr-2">
-                    <AvatarFallback>JD</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="text-sm font-medium sf-pro-text">John Doe</p>
-                    <p className="text-xs text-gray-400 sf-pro-text">Server</p>
-                  </div>
-                </div>
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  onClick={handleSignOut}
-                  className="text-gray-400 hover:text-white hover:bg-white/10"
-                >
-                  <LogOut className="h-5 w-5" />
-                </Button>
-              </div>
-            </div>
+            {userInfoSection}
           </SheetContent>
         </Sheet>
       </>
@@ -232,36 +299,7 @@ export function Sidebar() {
 
       <nav className="flex-grow py-4 overflow-y-auto">{renderNavItems()}</nav>
 
-      <div className="p-4 border-t border-gray-800">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center min-w-0">
-            <Avatar className="h-8 w-8 mr-2 flex-shrink-0">
-              <AvatarFallback>JD</AvatarFallback>
-            </Avatar>
-            {!collapsed && (
-              <div className="min-w-0">
-                <p className="text-sm font-medium sf-pro-text truncate">John Doe</p>
-                <p className="text-xs text-gray-400 sf-pro-text">Server</p>
-              </div>
-            )}
-          </div>
-          <TooltipProvider delayDuration={100}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleSignOut}
-                  className="text-gray-400 hover:text-white hover:bg-white/10"
-                >
-                  <LogOut className="h-5 w-5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right">Sign Out</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-      </div>
+      {desktopUserInfoSection}
     </div>
   )
 }

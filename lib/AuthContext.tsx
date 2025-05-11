@@ -4,12 +4,15 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import { User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabaseClient'
 import { useRouter } from 'next/navigation'
+import { PostgrestError } from '@supabase/supabase-js'
+
+type AppRole = 'server' | 'cook'
 
 type AuthContextType = {
   user: User | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<void>
-  signUp: (email: string, password: string) => Promise<void>
+  signUp: (email: string, password: string, name: string, role: AppRole) => Promise<void>
   signOut: () => Promise<void>
 }
 
@@ -56,9 +59,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) throw error
   }
 
-  const signUp = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({ email, password })
-    if (error) throw error
+  const signUp = async (email: string, password: string, name: string, role: AppRole) => {
+    // Sign up the user with metadata including role
+    const { error: signUpError, data } = await supabase.auth.signUp({ 
+      email, 
+      password,
+      options: {
+        data: {
+          full_name: name,
+          role: role // This will be used by the trigger to set the user's role
+        }
+      }
+    })
+    if (signUpError) throw signUpError
   }
 
   const signOut = async () => {
