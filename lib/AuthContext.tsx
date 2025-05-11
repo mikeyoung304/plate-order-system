@@ -11,6 +11,7 @@ type AppRole = 'server' | 'cook'
 type AuthContextType = {
   user: User | null
   loading: boolean
+  userRole: string | null
   signIn: (email: string, password: string) => Promise<void>
   signUp: (email: string, password: string, name: string, role: AppRole) => Promise<void>
   signOut: () => Promise<void>
@@ -21,7 +22,29 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [userRole, setUserRole] = useState<string | null>(null)
   const router = useRouter()
+
+  const fetchUserRole = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .single()
+
+      if (error) {
+        console.error('Error fetching user role:', error)
+        return
+      }
+
+      if (data) {
+        setUserRole(data.role)
+      }
+    } catch (error) {
+      console.error('Error fetching user role:', error)
+    }
+  }
 
   useEffect(() => {
     // Check active sessions and sets the user
@@ -29,6 +52,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const { data: { user: initialUser } } = await supabase.auth.getUser()
         setUser(initialUser)
+        if (initialUser) {
+          await fetchUserRole(initialUser.id)
+        }
       } catch (error) {
         console.error('Error loading user:', error)
       } finally {
@@ -41,9 +67,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for changes on auth state
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       setUser(session?.user ?? null)
-      if (event === 'SIGNED_IN') {
+      if (event === 'SIGNED_IN' && session?.user) {
+        await fetchUserRole(session.user.id)
         router.push('/dashboard')
       } else if (event === 'SIGNED_OUT') {
+        setUserRole(null)
         router.push('/')
       }
       router.refresh()
@@ -80,7 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, loading, userRole, signIn, signUp, signOut }}>
       {children}
     </AuthContext.Provider>
   )

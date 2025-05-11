@@ -37,36 +37,8 @@ export function Sidebar() {
   const [notifications, setNotifications] = useState(3)
   const isMobile = useMediaQuery("(max-width: 768px)")
   const [isMobileOpen, setIsMobileOpen] = useState(false)
-  const { user, signOut } = useAuth()
+  const { user, signOut, userRole } = useAuth()
   const { toast } = useToast()
-  const [userRole, setUserRole] = useState<string | null>(null)
-
-  useEffect(() => {
-    const fetchUserRole = async () => {
-      if (user) {
-        try {
-          const { data, error } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', user.id)
-            .single()
-
-          if (error) {
-            console.error('Error fetching user role:', error)
-            return
-          }
-
-          if (data) {
-            setUserRole(data.role)
-          }
-        } catch (error) {
-          console.error('Error fetching user role:', error)
-        }
-      }
-    }
-
-    fetchUserRole()
-  }, [user])
 
   // Reset mobile menu state when screen size changes
   useEffect(() => {
