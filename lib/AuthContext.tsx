@@ -37,13 +37,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Listen for changes on auth state
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      // Only update user state, no redirects on session changes
       setUser(session?.user ?? null)
-      if (event === 'SIGNED_IN') {
-        router.push('/dashboard')
-      } else if (event === 'SIGNED_OUT') {
+      
+      // Only redirect on explicit sign out
+      if (event === 'SIGNED_OUT') {
         router.push('/')
       }
-      router.refresh()
     })
 
     return () => {
@@ -54,11 +54,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw error
+    router.push('/dashboard')
   }
 
   const signUp = async (email: string, password: string) => {
     const { error } = await supabase.auth.signUp({ email, password })
     if (error) throw error
+    router.push('/dashboard')
   }
 
   const signOut = async () => {
