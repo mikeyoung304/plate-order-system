@@ -15,10 +15,13 @@ export default function KitchenPage() {
 
   // Initial load of orders
   useEffect(() => {
+    console.log("KitchenPage mounted");
     const loadOrders = async () => {
       try {
         setIsLoading(true);
+        console.log("KitchenPage: Fetching recent orders");
         const data = await fetchRecentOrders(50); // Get up to 50 recent orders
+        console.log(data);
         setOrders(data);
       } catch (err) {
         console.error('Failed to fetch orders:', err);
@@ -33,35 +36,6 @@ export default function KitchenPage() {
     };
 
     loadOrders();
-  }, [toast]);
-
-  // Subscribe to real-time order updates
-  useEffect(() => {
-    const unsubscribe = subscribeToOrders(
-      (order) => {
-        setOrders(prev => {
-          // If the order already exists, update it
-          const exists = prev.some(o => o.id === order.id);
-          if (exists) {
-            return prev.map(o => o.id === order.id ? order : o);
-          }
-          // Otherwise, add it to the beginning and maintain limit
-          return [order, ...prev].slice(0, 50);
-        });
-      },
-      (error) => {
-        console.error('Subscription error:', error);
-        toast({ 
-          title: 'Connection Error', 
-          description: 'Lost connection to order updates. Please refresh.', 
-          variant: 'destructive' 
-        });
-      }
-    );
-
-    return () => {
-      unsubscribe();
-    };
   }, [toast]);
 
   return (
