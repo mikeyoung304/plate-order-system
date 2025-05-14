@@ -26,9 +26,7 @@ export interface Order extends OrderRow {
 }
 
 export async function fetchRecentOrders(limit = 5): Promise<Order[]> {
-    console.log("fetchRecentOrders");
   const supabase = createClient();
-  console.log("Client created");
   
   const { data, error } = await supabase
     .from('orders')
@@ -39,7 +37,6 @@ export async function fetchRecentOrders(limit = 5): Promise<Order[]> {
     `)
     .order('created_at', { ascending: false })
     .limit(limit);
-    console.log("Data fetched");
 
   if (error) {
     console.error('Error fetching orders:', error);

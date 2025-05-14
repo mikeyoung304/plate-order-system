@@ -15,13 +15,10 @@ export default function KitchenPage() {
 
   // Initial load of orders
   useEffect(() => {
-    console.log("KitchenPage mounted");
     const loadOrders = async () => {
       try {
         setIsLoading(true);
-        console.log("KitchenPage: Fetching recent orders");
         const data = await fetchRecentOrders(50); // Get up to 50 recent orders
-        console.log(data);
         setOrders(data);
       } catch (err) {
         console.error('Failed to fetch orders:', err);
