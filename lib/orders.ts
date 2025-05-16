@@ -1,5 +1,4 @@
 import { createClient } from './supabase/client';
-import { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 interface OrderRow {
   id: string;
@@ -89,54 +88,3 @@ export async function createOrder(orderData: {
     items: data.items || []
   } as Order;
 }
-
-export function subscribeToOrders(
-  callback: (order: Order) => void,
-  errorCallback: (error: any) => void
-) {
-  const supabase = createClient();
-  
-  const subscription = supabase
-    .channel('orders')
-    .on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'orders'
-      },
-      async (payload: RealtimePostgresChangesPayload<OrderRow>) => {
-        if (!payload.new?.id) {
-          return;
-        }
-
-        // Fetch the complete order data with table and seat info
-        const { data, error } = await supabase
-          .from('orders')
-          .select(`
-            *,
-            tables!inner(label),
-            seats!inner(label)
-          `)
-          .eq('id', payload.new.id)
-          .single();
-
-        if (error) {
-          errorCallback(error);
-          return;
-        }
-
-        callback({
-          ...data,
-          table: `Table ${data.tables.label}`,
-          seat: data.seats.label,
-          items: data.items || []
-        } as Order);
-      }
-    )
-    .subscribe();
-
-  return () => {
-    subscription.unsubscribe();
-  };
-} 

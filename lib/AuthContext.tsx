@@ -4,7 +4,6 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import { User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabaseClient'
 import { useRouter } from 'next/navigation'
-import { PostgrestError } from '@supabase/supabase-js'
 
 type AppRole = 'server' | 'cook'
 
