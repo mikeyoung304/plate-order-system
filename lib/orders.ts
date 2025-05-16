@@ -1,4 +1,4 @@
-import { createClient } from './supabase/client';
+import { supabase } from './supabase/client';
 
 interface OrderRow {
   id: string;
@@ -25,8 +25,6 @@ export interface Order extends OrderRow {
 }
 
 export async function fetchRecentOrders(limit = 5): Promise<Order[]> {
-  const supabase = createClient();
-  
   const { data, error } = await supabase
     .from('orders')
     .select(`
@@ -42,7 +40,7 @@ export async function fetchRecentOrders(limit = 5): Promise<Order[]> {
     throw error;
   }
 
-  return data.map(order => ({
+  return data.map((order: OrderRow) => ({
     ...order,
     table: `Table ${order.tables.label}`,
     seat: order.seats.label,
@@ -59,8 +57,6 @@ export async function createOrder(orderData: {
   transcript: string;
   type: 'food' | 'drink';
 }): Promise<Order> {
-  const supabase = createClient();
-  
   const { data, error } = await supabase
     .from('orders')
     .insert([
@@ -87,4 +83,16 @@ export async function createOrder(orderData: {
     seat: data.seats.label,
     items: data.items || []
   } as Order;
+}
+
+export async function updateOrderStatus(orderId: string, status: OrderRow['status']): Promise<void> {
+  const { error } = await supabase
+    .from('orders')
+    .update({ status })
+    .eq('id', orderId);
+
+  if (error) {
+    console.error('Error updating order status:', error);
+    throw error;
+  }
 }
