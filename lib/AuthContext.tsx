@@ -29,7 +29,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const fetchUserRole = async (userId: string) => {
     try {
       const { data, error } = await supabase
-        .from('user_roles')
+        .from('profiles')
         .select('role')
         .eq('user_id', userId)
         .single()
@@ -121,13 +121,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signUp = async (email: string, password: string, name: string, role: AppRole) => {
-    // Sign up the user with metadata including role
+    // Sign up the user with metadata including role and name
     const { error: signUpError, data } = await supabase.auth.signUp({ 
       email, 
       password,
       options: {
         data: {
-          full_name: name,
+          name: name,
           role: role // This will be used by the trigger to set the user's role
         }
       }
